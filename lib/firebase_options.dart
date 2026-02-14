@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '363472131073',
     projectId: 'foodmali',
     storageBucket: 'foodmali.firebasestorage.app',
-    iosBundleId: 'com.example.foodMali',
+    iosBundleId: 'com.lawoldev.foodMali',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
