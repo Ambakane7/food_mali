@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "363472131073",
+    "project_id": "foodmali",
+    "storage_bucket": "foodmali.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:363472131073:android:e40f543fb368f3f1fb9c00",
+        "android_client_info": {
+          "package_name": "com.laawoldev.foodmali"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5l2YlYWi5221yMbmdGERQ9hRGtSnxeKs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

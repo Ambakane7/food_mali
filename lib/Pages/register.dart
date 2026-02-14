@@ -1,0 +1,331 @@
+import 'package:country_picker/country_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:food_mali/auth/auth_service.dart';
+import 'package:lottie/lottie.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../components/my_button.dart';
+import '../components/my_textfield.dart';
+
+class RegisterPage extends StatefulWidget {
+  final Function()? onTap;
+  const RegisterPage({super.key, this.onTap});
+
+  @override
+  State<RegisterPage> createState() => _RegisterPageState();
+}
+
+class _RegisterPageState extends State<RegisterPage> {
+  final TextEditingController firstNameController = TextEditingController();
+  final TextEditingController lastNameController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmpasswordController =
+  TextEditingController();
+
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
+  String? selectedAgeRange;
+
+  final List<String> ageRanges = [
+    "Moins de 18 ans",
+    "18 – 24 ans",
+    "25 – 34 ans",
+    "35 – 44 ans",
+    "45 – 54 ans",
+    "55 ans et plus",
+  ];
+
+  Country selectedCountry = Country(
+    phoneCode: '223',
+    countryCode: 'ML',
+    e164Sc: 0,
+    geographic: true,
+    level: 1,
+    name: 'Mali',
+    example: '650123456',
+    displayName: 'Mali',
+    displayNameNoCountryCode: 'Mali',
+    e164Key: '',
+  );
+
+  // ================= VALIDATION =================
+  bool validateFields() {
+    final phone = phoneController.text.trim();
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+    final confirmPassword = confirmpasswordController.text.trim();
+
+    if (firstNameController.text.trim().isEmpty ||
+        lastNameController.text.trim().isEmpty ||
+        phone.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
+      showError("Veuillez remplir tous les champs obligatoires.");
+      return false;
+    }
+
+    if (!RegExp(r'^[0-9]{8}$').hasMatch(phone)) {
+      showError("Le numéro de téléphone doit contenir exactement 8 chiffres.");
+      return false;
+    }
+
+    if (email.isNotEmpty &&
+        !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      showError("L'adresse email n'est pas valide.");
+      return false;
+    }
+
+    if (password != confirmPassword) {
+      showError("Les mots de passe ne correspondent pas.");
+      return false;
+    }
+
+    return true;
+  }
+
+  void showError(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Erreur"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          )
+        ],
+      ),
+    );
+  }
+
+  String generateInternalEmail(String phone) {
+    return "user_$phone@foodmali.app";
+  }
+
+  // ================= REGISTER =================
+  void register() async {
+    final authService = AuthService();
+    if (!validateFields()) return;
+
+    final phoneFull =
+        "+${selectedCountry.phoneCode}${phoneController.text.trim()}";
+
+    final String email = emailController.text.trim().isEmpty
+        ? generateInternalEmail(phoneController.text.trim())
+        : emailController.text.trim();
+
+    try {
+      final userCredential = await authService.signUpWithEmailPassword(
+        email,
+        passwordController.text.trim(),
+      );
+
+      final uid = userCredential.user?.uid;
+
+      if (uid != null) {
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'firstName': firstNameController.text.trim(),
+          'lastName': lastNameController.text.trim(),
+          'phone': phoneFull,
+          'email': emailController.text.trim().isEmpty
+              ? null
+              : emailController.text.trim(),
+          'ageRange': selectedAgeRange,
+          'createdAt': Timestamp.now(),
+        });
+      }
+
+      showDialog(
+        context: context,
+        builder: (_) => const AlertDialog(
+          title: Text("Inscription réussie"),
+        ),
+      );
+    } catch (e) {
+      showError("Erreur lors de l'inscription.");
+    }
+  }
+
+  // ================= UI =================
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white.withOpacity(0.2),
+      body: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Lottie.asset("lib/images/Login.json"),
+            const SizedBox(height: 10),
+            const Text(
+              "Let's create an account",
+              style: TextStyle(fontSize: 18, color: Colors.white),
+            ),
+            const SizedBox(height: 25),
+
+            MyTextfield(
+              controller: firstNameController,
+              hintext: "Prénom",
+              obscureText: false,
+            ),
+            const SizedBox(height: 10),
+
+            MyTextfield(
+              controller: lastNameController,
+              hintext: "Nom",
+              obscureText: false,
+            ),
+            const SizedBox(height: 10),
+
+            // ===== PHONE =====
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              decoration: BoxDecoration(
+                border: Border.all(
+                    color: Theme.of(context).colorScheme.tertiary),
+                borderRadius: BorderRadius.circular(5),
+              ),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      showCountryPicker(
+                        context: context,
+                        countryListTheme:
+                        const CountryListThemeData(bottomSheetHeight: 550),
+                        onSelect: (Country country) {
+                          setState(() => selectedCountry = country);
+                        },
+                      );
+                    },
+                    child: Row(
+                      children: [
+                        Text("+${selectedCountry.phoneCode}",
+                            style: TextStyle(
+                                fontSize: 16,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .inversePrimary)),
+                        const Icon(Icons.arrow_drop_down),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: phoneController,
+                      keyboardType: TextInputType.phone,
+                      maxLength: 8,
+                      decoration: InputDecoration(
+                        counterText: "",
+                        border: InputBorder.none,
+                        hintText: "Téléphone",
+                        hintStyle: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .inversePrimary),
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            MyTextfield(
+              controller: emailController,
+              hintext: "Email",
+              obscureText: false,
+            ),
+
+            const SizedBox(height: 10),
+
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: DropdownButtonFormField<String>(
+                value: selectedAgeRange,
+                decoration: const InputDecoration(
+                  hintText: "Tranche d'âge",
+                  border: OutlineInputBorder(),
+                ),
+                items: ageRanges
+                    .map((age) => DropdownMenuItem(
+                  value: age,
+                  child: Text(age),
+                ))
+                    .toList(),
+                onChanged: (value) =>
+                    setState(() => selectedAgeRange = value),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // ===== PASSWORD =====
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: TextField(
+                controller: passwordController,
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
+                  hintText: "Mot de passe",
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // ===== CONFIRM PASSWORD =====
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: TextField(
+                controller: confirmpasswordController,
+                obscureText: _obscureConfirmPassword,
+                decoration: InputDecoration(
+                  hintText: "Confirmer le mot de passe",
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureConfirmPassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscureConfirmPassword =
+                        !_obscureConfirmPassword;
+                      });
+                    },
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            MyButton(text: "S'inscrire", onTap: register),
+
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
