@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../Pages/login_page.dart';
-import '../Pages/settings_page.dart';
 import '../model/restaurants.dart';
 import 'my_drawer_tile.dart';
 
@@ -17,7 +16,6 @@ class MyDrawer extends StatefulWidget {
 
 class _MyDrawerState extends State<MyDrawer> {
   Map<String, dynamic>? userData;
-  bool isDarkMode = false;
 
   // ================= FETCH USER =================
   Future<void> _fetchUserData() async {
@@ -27,6 +25,7 @@ class _MyDrawerState extends State<MyDrawer> {
           .collection('users')
           .doc(user.uid)
           .get();
+
       setState(() {
         userData = doc.data();
       });
@@ -51,10 +50,81 @@ class _MyDrawerState extends State<MyDrawer> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchUserData();
+  // ================= DELETE ACCOUNT =================
+  Future<void> _deleteAccount() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      // Supprimer les commandes
+      final orders = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('orders')
+          .get();
+
+      for (var doc in orders.docs) {
+        await doc.reference.delete();
+      }
+
+      // Supprimer document user
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .delete();
+
+      // Supprimer compte auth
+      await user.delete();
+
+      if (!mounted) return;
+
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => LoginPage()),
+            (route) => false,
+      );
+
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                "Veuillez vous reconnecter avant de supprimer votre compte."),
+          ),
+        );
+      }
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Erreur lors de la suppression du compte."),
+        ),
+      );
+    }
+  }
+
+  void _confirmDeleteAccount() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Supprimer le compte"),
+        content: const Text(
+            "Cette action est définitive.\nVoulez-vous vraiment supprimer votre compte ?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Annuler"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteAccount();
+            },
+            child: const Text("Supprimer"),
+          ),
+        ],
+      ),
+    );
   }
 
   // ================= EDIT DIALOG =================
@@ -76,20 +146,21 @@ class _MyDrawerState extends State<MyDrawer> {
           child: Column(
             children: [
               TextField(
-                  controller: firstNameController,
-                  decoration:
-                  const InputDecoration(labelText: "Prénom")),
+                controller: firstNameController,
+                decoration: const InputDecoration(labelText: "Prénom"),
+              ),
               TextField(
-                  controller: lastNameController,
-                  decoration: const InputDecoration(labelText: "Nom")),
+                controller: lastNameController,
+                decoration: const InputDecoration(labelText: "Nom"),
+              ),
               TextField(
-                  controller: phoneController,
-                  decoration:
-                  const InputDecoration(labelText: "Téléphone")),
+                controller: phoneController,
+                decoration: const InputDecoration(labelText: "Téléphone"),
+              ),
               TextField(
-                  controller: addressController,
-                  decoration:
-                  const InputDecoration(labelText: "Adresse")),
+                controller: addressController,
+                decoration: const InputDecoration(labelText: "Adresse"),
+              ),
             ],
           ),
         ),
@@ -116,6 +187,12 @@ class _MyDrawerState extends State<MyDrawer> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final firstName = userData?['firstName'] ?? '';
     final lastName = userData?['lastName'] ?? '';
@@ -126,127 +203,93 @@ class _MyDrawerState extends State<MyDrawer> {
     return Drawer(
       backgroundColor: Colors.white,
       child: SafeArea(
-        child: Column(
-          children: [
-            // ================= PROFILE =================
-            Card(
-              margin: const EdgeInsets.all(16),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor:
-                      Theme.of(context).colorScheme.primary,
-                      child: Text(
-                        firstName.isNotEmpty
-                            ? firstName[0].toUpperCase()
-                            : "?",
-                        style: const TextStyle(
-                            fontSize: 30, color: Colors.white),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              Card(
+                margin: const EdgeInsets.all(16),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor:
+                        Theme.of(context).colorScheme.primary,
+                        child: Text(
+                          firstName.isNotEmpty
+                              ? firstName[0].toUpperCase()
+                              : "?",
+                          style: const TextStyle(
+                              fontSize: 30, color: Colors.white),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "$firstName $lastName",
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 18),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(email,
-                        style: const TextStyle(color: Colors.grey)),
-                    if (phone.isNotEmpty)
-                      Text(phone,
-                          style:
-                          const TextStyle(color: Colors.grey)),
-                    if (address.isNotEmpty)
-                      Text(address,
-                          textAlign: TextAlign.center,
-                          style:
-                          const TextStyle(color: Colors.grey)),
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: _showEditDialog,
-                      icon: const Icon(Icons.edit),
-                      label: const Text("Modifier"),
-                    )
-                  ],
+                      const SizedBox(height: 10),
+                      Text(
+                        "$firstName $lastName",
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(email,
+                          style: const TextStyle(color: Colors.grey)),
+                      if (phone.isNotEmpty)
+                        Text(phone,
+                            style:
+                            const TextStyle(color: Colors.grey)),
+                      if (address.isNotEmpty)
+                        Text(address,
+                            textAlign: TextAlign.center,
+                            style:
+                            const TextStyle(color: Colors.grey)),
+                      const SizedBox(height: 8),
+                      TextButton.icon(
+                        onPressed: _showEditDialog,
+                        icon: const Icon(Icons.edit),
+                        label: const Text("Modifier"),
+                      )
+                    ],
+                  ),
                 ),
               ),
-            ),
 
-            const Divider(color: Colors.grey,),
+              const Divider(),
 
-            // ================= MENU =================
-            MyDrawerTile(
-              text: "A C C U E I L",
-              icon: Icons.home_outlined,
-              ontTap: () => Navigator.pop(context),
-            ),
-            const Divider(color: Colors.grey,),
+              MyDrawerTile(
+                text: "ACCUEIL",
+                icon: Icons.home_outlined,
+                ontTap: () => Navigator.pop(context),
+              ),
 
-            MyDrawerTile(
-              text: "M E S  C O M M A N D E S",
-              icon: Icons.receipt_long_outlined,
-              ontTap: () {
-                Navigator.pop(context);
-                // TODO: OrdersPage
-              },
-            ),
-            const Divider(color: Colors.grey,),
-            MyDrawerTile(
-              text: "A D R E S S E  D E  L I V R A I S O N",
-              icon: Icons.location_on_outlined,
-              ontTap: _showEditDialog,
-            ),
+              MyDrawerTile(
+                text: "ADRESSE DE LIVRAISON",
+                icon: Icons.location_on_outlined,
+                ontTap: _showEditDialog,
+              ),
 
-            const Divider(color: Colors.grey,),
-            MyDrawerTile(
-              text: "A I D E  &  S U P P O R T",
-              icon: Icons.support_agent_outlined,
-              ontTap: () {
-                showDialog(
-                  context: context,
-                  builder: (_) => const AlertDialog(
-                    title: Text("Support"),
-                    content: Text(
-                        "Contactez-nous :\n+223 78 05 21 21 \n ambakaneguindo@yahoo.com"),
-                  ),
-                );
-              },
-            ),
-            const Divider(color: Colors.grey,),
-            MyDrawerTile(
-              text: "À  P R O P O S",
-              icon: Icons.info_outline,
-              ontTap: () {
-                showAboutDialog(
-                  context: context,
-                  applicationName: "FoodMali",
-                  applicationVersion: "1.0.0",
-                  applicationLegalese: "© 2026 LaawolDev",
-                );
-              },
-            ),
+              MyDrawerTile(
+                text: "SUPPRIMER MON COMPTE",
+                icon: Icons.delete_outline,
+                ontTap: _confirmDeleteAccount,
+              ),
 
-            // ================= LOGOUT =================
-            MyDrawerTile(
-              text: "L O G O U T",
-              icon: Icons.logout_outlined,
-              ontTap: () async {
-                await FirebaseAuth.instance.signOut();
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => LoginPage()),
-                      (_) => false,
-                );
-              },
-            ),
+              MyDrawerTile(
+                text: "LOGOUT",
+                icon: Icons.logout_outlined,
+                ontTap: () async {
+                  await FirebaseAuth.instance.signOut();
+                  if (!mounted) return;
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => LoginPage()),
+                        (route) => false,
+                  );
+                },
+              ),
 
-            const SizedBox(height: 20),
-          ],
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );

@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = ""
+        applicationId = "com.laawoldev.foodmali"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
