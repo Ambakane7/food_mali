@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:food_mali/Accueil/accueil.dart';
@@ -7,23 +9,29 @@ import 'package:provider/provider.dart';
 import 'firebase_api.dart';
 import 'firebase_options.dart';
 
-void main()async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform
-  );
-  await FirebaseApi().initNotifications();
-  runApp(
-  MultiProvider(providers: [
-    // theme provider
-    ChangeNotifierProvider(create: (context)=>ThemeProvider()),
-    // restaurant provider
-    ChangeNotifierProvider(create: (context)=>Restaurants())
-  ], child: const MyApp(),
-  ),
 
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // 🔒 Désactiver temporairement les notifications sur iOS
+  if (!Platform.isIOS) {
+    await FirebaseApi().initNotifications();
+  }
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        ChangeNotifierProvider(create: (context) => Restaurants()),
+      ],
+      child: const MyApp(),
+    ),
   );
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

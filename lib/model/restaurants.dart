@@ -605,27 +605,19 @@ class Restaurants extends ChangeNotifier {
     Food(
         "Patate Fourée",
         "Patate, poulet, fromage, beurre",
-        "lib/images/bobohouse/patate_fouréz.JPG",
+        "lib/images/bobohouse/patate_fouréz.webp",
         6000,
         FoodCategory.Special,
         [
         ],
         "Best Seller"
     ),
-    Food(
-        "Pizza Armenienne",
-        "",
-        "lib/images/allo_pizza/armerienne.jpg",
-        7000,
-        FoodCategory.Pizza,
-        [],
-        "Best Seller"
-    ),
+
 
     Food(
         "Quesadillas avec poulet",
         "Tortillas, viande hachée, fromage",
-        "lib/images/bobohouse/quesadillas.JPG",
+        "lib/images/bobohouse/quesadillas.webp",
         7000,
         FoodCategory.Special,
         [
@@ -642,7 +634,7 @@ class Restaurants extends ChangeNotifier {
         FoodCategory.Gateau,
         [
         ],
-        "Delights by KADIDIA"
+        "Best Seller"
     ),
 
   ];

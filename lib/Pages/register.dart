@@ -27,6 +27,8 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscureConfirmPassword = true;
 
   String? selectedAgeRange;
+  String? selectedGender;
+  bool acceptDataUsage = false;
 
   final List<String> ageRanges = [
     "Moins de 18 ans",
@@ -35,6 +37,11 @@ class _RegisterPageState extends State<RegisterPage> {
     "35 – 44 ans",
     "45 – 54 ans",
     "55 ans et plus",
+  ];
+
+  final List<String> genders = [
+    "Homme",
+    "Femme",
   ];
 
   Country selectedCountry = Country(
@@ -67,18 +74,29 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     if (!RegExp(r'^[0-9]{8}$').hasMatch(phone)) {
-      showError("Le numéro de téléphone doit contenir exactement 8 chiffres.");
+      showError("Le numéro doit contenir exactement 8 chiffres.");
       return false;
     }
 
     if (email.isNotEmpty &&
         !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      showError("L'adresse email n'est pas valide.");
+      showError("Adresse email invalide.");
       return false;
     }
 
     if (password != confirmPassword) {
       showError("Les mots de passe ne correspondent pas.");
+      return false;
+    }
+
+    if (selectedGender == null) {
+      showError("Veuillez sélectionner votre genre.");
+      return false;
+    }
+
+    if (!acceptDataUsage) {
+      showError(
+          "Vous devez accepter l'utilisation des données pour continuer.");
       return false;
     }
 
@@ -134,6 +152,11 @@ class _RegisterPageState extends State<RegisterPage> {
               ? null
               : emailController.text.trim(),
           'ageRange': selectedAgeRange,
+          'gender': selectedGender,
+          'dataConsent': acceptDataUsage,
+          'orderCount': 0,
+          'totalSpent': 0,
+          'segment': 'new_user',
           'createdAt': Timestamp.now(),
         });
       }
@@ -160,11 +183,6 @@ class _RegisterPageState extends State<RegisterPage> {
           children: [
             Lottie.asset("lib/images/Login.json"),
             const SizedBox(height: 10),
-            const Text(
-              "Let's create an account",
-              style: TextStyle(fontSize: 18, color: Colors.white),
-            ),
-            const SizedBox(height: 25),
 
             MyTextfield(
               controller: firstNameController,
@@ -180,7 +198,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             const SizedBox(height: 10),
 
-            // ===== PHONE =====
+            // ===== TELEPHONE =====
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               decoration: BoxDecoration(
@@ -203,12 +221,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                     child: Row(
                       children: [
-                        Text("+${selectedCountry.phoneCode}",
-                            style: TextStyle(
-                                fontSize: 16,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .inversePrimary)),
+                        Text("+${selectedCountry.phoneCode}"),
                         const Icon(Icons.arrow_drop_down),
                       ],
                     ),
@@ -219,14 +232,10 @@ class _RegisterPageState extends State<RegisterPage> {
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
                       maxLength: 8,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         counterText: "",
                         border: InputBorder.none,
                         hintText: "Téléphone",
-                        hintStyle: TextStyle(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .inversePrimary),
                       ),
                     ),
                   )
@@ -238,12 +247,33 @@ class _RegisterPageState extends State<RegisterPage> {
 
             MyTextfield(
               controller: emailController,
-              hintext: "Email",
+              hintext: "Email (optionnel)",
               obscureText: false,
             ),
 
             const SizedBox(height: 10),
 
+            // ===== GENRE =====
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: DropdownButtonFormField<String>(
+                value: selectedGender,
+                decoration: const InputDecoration(
+                  hintText: "Genre",
+                  border: OutlineInputBorder(),
+                ),
+                items: genders
+                    .map((g) =>
+                    DropdownMenuItem(value: g, child: Text(g)))
+                    .toList(),
+                onChanged: (value) =>
+                    setState(() => selectedGender = value),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // ===== AGE =====
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: DropdownButtonFormField<String>(
@@ -275,11 +305,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   hintText: "Mot de passe",
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                    ),
+                    icon: Icon(_obscurePassword
+                        ? Icons.visibility_off
+                        : Icons.visibility),
                     onPressed: () {
                       setState(() {
                         _obscurePassword = !_obscurePassword;
@@ -302,11 +330,9 @@ class _RegisterPageState extends State<RegisterPage> {
                   hintText: "Confirmer le mot de passe",
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
-                    icon: Icon(
-                      _obscureConfirmPassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                    ),
+                    icon: Icon(_obscureConfirmPassword
+                        ? Icons.visibility_off
+                        : Icons.visibility),
                     onPressed: () {
                       setState(() {
                         _obscureConfirmPassword =
@@ -315,6 +341,31 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                 ),
+              ),
+            ),
+
+            const SizedBox(height: 15),
+
+            // ===== CONSENTEMENT =====
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30),
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: acceptDataUsage,
+                    onChanged: (value) {
+                      setState(() {
+                        acceptDataUsage = value ?? false;
+                      });
+                    },
+                  ),
+                  const Expanded(
+                    child: Text(
+                      "J'accepte que mes données soient utilisées pour améliorer l'expérience et les services FoodMali.",
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
+                ],
               ),
             ),
 

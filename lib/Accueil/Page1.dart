@@ -33,7 +33,6 @@ class _Page1State extends State<Page1> with SingleTickerProviderStateMixin {
   final List<String> imagePaths = [
     "lib/images/bobohouse/mexico_city.webp",
     'lib/images/burger/chipotle_burger.jpg',
-    'lib/images/salads/chiken_salld.jpg',
     "lib/images/kadi/anniv/gateau_anniv_10_25k.jpeg",
     "lib/images/kfc_junior/kfc_12_pcs.jpeg",
   ];
