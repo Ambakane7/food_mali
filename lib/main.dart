@@ -1,12 +1,9 @@
-import 'dart:io';
-
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:food_mali/Accueil/accueil.dart';
 import 'package:food_mali/model/restaurants.dart';
 import 'package:food_mali/themes/theme_provider.dart';
 import 'package:provider/provider.dart';
-import 'firebase_api.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -15,11 +12,6 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
-  // 🔒 Désactiver temporairement les notifications sur iOS
-  if (!Platform.isIOS) {
-    await FirebaseApi().initNotifications();
-  }
 
   runApp(
     MultiProvider(
