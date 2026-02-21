@@ -71,7 +71,7 @@ class Restaurants extends ChangeNotifier {
     Food(
         "KFC 8 PCS",
         "",
-        "lib/images/kfc_junior/chawarma.jpeg",
+        "lib/images/kfc_junior/kfc_8.jpeg",
         2000,
         FoodCategory.KFC,
         [
@@ -105,7 +105,7 @@ class Restaurants extends ChangeNotifier {
     Food(
         "KFC 5 PCS",
         "",
-        "lib/images/kfc_junior/chawarma.jpeg",
+        "lib/images/kfc_junior/kfc_5_pcs.jpeg",
         5000,
         FoodCategory.KFC,
         [
@@ -162,15 +162,7 @@ class Restaurants extends ChangeNotifier {
         "KFC JUNIOR"
     ),
     // fin ajout nouvelle
-    Food(
-        "KFC 3 PCS",
-        "",
-        "lib/images/kfc_junior/kfc_3_pcs.jpeg",
-        4000,
-        FoodCategory.KFC,
-        [Addon(name: "Frittes", price: 0)],
-        "KFC JUNIOR"
-    ),
+
     Food(
         "Sandwich Poulet",
         "",
