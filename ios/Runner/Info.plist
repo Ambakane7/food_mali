@@ -32,19 +32,19 @@
     <key>CFBundleShortVersionString</key>
     <string>$(FLUTTER_BUILD_NAME)</string>
 
-    <key>CFBundleSignature</key>
-    <string>????</string>
-
     <key>CFBundleVersion</key>
     <string>$(FLUTTER_BUILD_NUMBER)</string>
 
-    <!-- iPhone Only -->
+    <!-- 🔒 iPhone ONLY -->
     <key>UIDeviceFamily</key>
     <array>
         <integer>1</integer>
     </array>
 
     <key>LSRequiresIPhoneOS</key>
+    <true/>
+
+    <key>UIRequiresFullScreen</key>
     <true/>
 
     <!-- Launch -->
@@ -58,15 +58,6 @@
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
-        <string>UIInterfaceOrientationLandscapeLeft</string>
-        <string>UIInterfaceOrientationLandscapeRight</string>
-    </array>
-
-    <!-- iPad orientations (kept but ignored because iPhone only) -->
-    <key>UISupportedInterfaceOrientations~ipad</key>
-    <array>
-        <string>UIInterfaceOrientationPortrait</string>
-        <string>UIInterfaceOrientationPortraitUpsideDown</string>
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
