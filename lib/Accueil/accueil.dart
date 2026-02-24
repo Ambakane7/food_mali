@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:food_mali/auth/auth_gate.dart';
-import 'package:lottie/lottie.dart';
+import 'package:food_mali/Accueil/Page1.dart';
+
 
 class Accueil extends StatelessWidget {
   const Accueil({super.key});
@@ -61,7 +61,7 @@ class Accueil extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const AuthGate()),
+                        MaterialPageRoute(builder: (context) => const Page1()),
                       );
                     },
                     child: const Text(

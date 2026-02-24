@@ -66,18 +66,19 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (firstNameController.text.trim().isEmpty ||
         lastNameController.text.trim().isEmpty ||
-        phone.isEmpty ||
         password.isEmpty ||
         confirmPassword.isEmpty) {
-      showError("Veuillez remplir tous les champs obligatoires.");
+      showError("Veuillez remplir les champs requis.");
       return false;
     }
 
-    if (!RegExp(r'^[0-9]{8}$').hasMatch(phone)) {
+    // Validation téléphone uniquement si rempli
+    if (phone.isNotEmpty && !RegExp(r'^[0-9]{8}$').hasMatch(phone)) {
       showError("Le numéro doit contenir exactement 8 chiffres.");
       return false;
     }
 
+    // Validation email uniquement si rempli
     if (email.isNotEmpty &&
         !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
       showError("Adresse email invalide.");
@@ -86,11 +87,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (password != confirmPassword) {
       showError("Les mots de passe ne correspondent pas.");
-      return false;
-    }
-
-    if (selectedGender == null) {
-      showError("Veuillez sélectionner votre genre.");
       return false;
     }
 
@@ -119,8 +115,8 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  String generateInternalEmail(String phone) {
-    return "user_$phone@foodmali.app";
+  String generateInternalEmail(String uid) {
+    return "user_$uid@foodmali.app";
   }
 
   // ================= REGISTER =================
@@ -128,22 +124,24 @@ class _RegisterPageState extends State<RegisterPage> {
     final authService = AuthService();
     if (!validateFields()) return;
 
-    final phoneFull =
-        "+${selectedCountry.phoneCode}${phoneController.text.trim()}";
-
-    final String email = emailController.text.trim().isEmpty
-        ? generateInternalEmail(phoneController.text.trim())
-        : emailController.text.trim();
-
     try {
       final userCredential = await authService.signUpWithEmailPassword(
-        email,
+        emailController.text.trim().isEmpty
+            ? "temp_${DateTime.now().millisecondsSinceEpoch}@foodmali.app"
+            : emailController.text.trim(),
         passwordController.text.trim(),
       );
 
       final uid = userCredential.user?.uid;
 
       if (uid != null) {
+        String? phoneFull;
+
+        if (phoneController.text.trim().isNotEmpty) {
+          phoneFull =
+          "+${selectedCountry.phoneCode}${phoneController.text.trim()}";
+        }
+
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'firstName': firstNameController.text.trim(),
           'lastName': lastNameController.text.trim(),
@@ -179,7 +177,6 @@ class _RegisterPageState extends State<RegisterPage> {
       backgroundColor: Colors.white.withOpacity(0.2),
       body: SingleChildScrollView(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Lottie.asset("lib/images/Login.json"),
             const SizedBox(height: 10),
@@ -198,7 +195,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             const SizedBox(height: 10),
 
-            // ===== TELEPHONE =====
+            // TELEPHONE
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               decoration: BoxDecoration(
@@ -212,8 +209,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     onTap: () {
                       showCountryPicker(
                         context: context,
-                        countryListTheme:
-                        const CountryListThemeData(bottomSheetHeight: 550),
                         onSelect: (Country country) {
                           setState(() => selectedCountry = country);
                         },
@@ -247,13 +242,13 @@ class _RegisterPageState extends State<RegisterPage> {
 
             MyTextfield(
               controller: emailController,
-              hintext: "Email (optionnel)",
+              hintext: "Email",
               obscureText: false,
             ),
 
             const SizedBox(height: 10),
 
-            // ===== GENRE =====
+            // GENRE
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: DropdownButtonFormField<String>(
@@ -273,7 +268,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
             const SizedBox(height: 10),
 
-            // ===== AGE =====
+            // AGE
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: DropdownButtonFormField<String>(
@@ -295,7 +290,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
             const SizedBox(height: 10),
 
-            // ===== PASSWORD =====
+            // PASSWORD
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: TextField(
@@ -320,7 +315,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
             const SizedBox(height: 10),
 
-            // ===== CONFIRM PASSWORD =====
+            // CONFIRM PASSWORD
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: TextField(
@@ -346,7 +341,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
             const SizedBox(height: 15),
 
-            // ===== CONSENTEMENT =====
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: Row(
@@ -361,7 +355,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const Expanded(
                     child: Text(
-                      "J'accepte que mes données soient utilisées pour améliorer l'expérience et les services FoodMali.",
+                      "J'accepte l'utilisation des données pour améliorer l'expérience FoodMali.",
                       style: TextStyle(fontSize: 13),
                     ),
                   ),

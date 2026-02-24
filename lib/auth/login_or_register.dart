@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:food_mali/Pages/login_page.dart';
 import 'package:food_mali/Pages/register.dart';
 
-
 class LoginOrRegister extends StatefulWidget {
   const LoginOrRegister({super.key});
 
@@ -11,25 +10,27 @@ class LoginOrRegister extends StatefulWidget {
 }
 
 class _LoginOrRegisterState extends State<LoginOrRegister> {
-  // initally, show login page
-
   bool showLoginPage = true;
-  // toogle between login and register page
-  void togglePages(){
+
+  void togglePages() {
     setState(() {
       showLoginPage = !showLoginPage;
     });
   }
-  //
-  //
+
   @override
   Widget build(BuildContext context) {
-    if(showLoginPage){return  LoginPage(
-      onTap: togglePages,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: showLoginPage
+          ? LoginPage(
+        key: const ValueKey("login"),
+        onTap: togglePages,
+      )
+          : RegisterPage(
+        key: const ValueKey("register"),
+        onTap: togglePages,
+      ),
     );
-    }else {
-      return RegisterPage(onTap: togglePages,);
-    }
-
   }
 }
