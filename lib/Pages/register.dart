@@ -25,24 +25,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-
-  String? selectedAgeRange;
-  String? selectedGender;
   bool acceptDataUsage = false;
-
-  final List<String> ageRanges = [
-    "Moins de 18 ans",
-    "18 – 24 ans",
-    "25 – 34 ans",
-    "35 – 44 ans",
-    "45 – 54 ans",
-    "55 ans et plus",
-  ];
-
-  final List<String> genders = [
-    "Homme",
-    "Femme",
-  ];
 
   Country selectedCountry = Country(
     phoneCode: '223',
@@ -66,22 +49,22 @@ class _RegisterPageState extends State<RegisterPage> {
 
     if (firstNameController.text.trim().isEmpty ||
         lastNameController.text.trim().isEmpty ||
+        email.isEmpty ||
         password.isEmpty ||
         confirmPassword.isEmpty) {
-      showError("Veuillez remplir les champs requis.");
+      showError("Veuillez remplir tous les champs obligatoires.");
       return false;
     }
 
-    // Validation téléphone uniquement si rempli
+    // Email obligatoire
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      showError("Adresse email invalide.");
+      return false;
+    }
+
+    // Téléphone optionnel mais valide si rempli
     if (phone.isNotEmpty && !RegExp(r'^[0-9]{8}$').hasMatch(phone)) {
       showError("Le numéro doit contenir exactement 8 chiffres.");
-      return false;
-    }
-
-    // Validation email uniquement si rempli
-    if (email.isNotEmpty &&
-        !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      showError("Adresse email invalide.");
       return false;
     }
 
@@ -115,42 +98,29 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  String generateInternalEmail(String uid) {
-    return "user_$uid@foodmali.app";
-  }
-
   // ================= REGISTER =================
   void register() async {
     final authService = AuthService();
     if (!validateFields()) return;
 
+    final phone = phoneController.text.trim();
+    final phoneFull =
+    phone.isNotEmpty ? "+${selectedCountry.phoneCode}$phone" : null;
+
     try {
       final userCredential = await authService.signUpWithEmailPassword(
-        emailController.text.trim().isEmpty
-            ? "temp_${DateTime.now().millisecondsSinceEpoch}@foodmali.app"
-            : emailController.text.trim(),
+        emailController.text.trim(),
         passwordController.text.trim(),
       );
 
       final uid = userCredential.user?.uid;
 
       if (uid != null) {
-        String? phoneFull;
-
-        if (phoneController.text.trim().isNotEmpty) {
-          phoneFull =
-          "+${selectedCountry.phoneCode}${phoneController.text.trim()}";
-        }
-
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'firstName': firstNameController.text.trim(),
           'lastName': lastNameController.text.trim(),
           'phone': phoneFull,
-          'email': emailController.text.trim().isEmpty
-              ? null
-              : emailController.text.trim(),
-          'ageRange': selectedAgeRange,
-          'gender': selectedGender,
+          'email': emailController.text.trim(),
           'dataConsent': acceptDataUsage,
           'orderCount': 0,
           'totalSpent': 0,
@@ -159,12 +129,11 @@ class _RegisterPageState extends State<RegisterPage> {
         });
       }
 
-      showDialog(
-        context: context,
-        builder: (_) => const AlertDialog(
-          title: Text("Inscription réussie"),
-        ),
-      );
+      if (!mounted) return;
+
+      Navigator.pushNamedAndRemoveUntil(
+          context, "/", (route) => false);
+
     } catch (e) {
       showError("Erreur lors de l'inscription.");
     }
@@ -177,6 +146,7 @@ class _RegisterPageState extends State<RegisterPage> {
       backgroundColor: Colors.white.withOpacity(0.2),
       body: SingleChildScrollView(
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Lottie.asset("lib/images/Login.json"),
             const SizedBox(height: 10),
@@ -195,7 +165,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
             const SizedBox(height: 10),
 
-            // TELEPHONE
+            // ===== TELEPHONE (optionnel) =====
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               decoration: BoxDecoration(
@@ -209,6 +179,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     onTap: () {
                       showCountryPicker(
                         context: context,
+                        countryListTheme:
+                        const CountryListThemeData(bottomSheetHeight: 550),
                         onSelect: (Country country) {
                           setState(() => selectedCountry = country);
                         },
@@ -248,49 +220,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
             const SizedBox(height: 10),
 
-            // GENRE
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: DropdownButtonFormField<String>(
-                value: selectedGender,
-                decoration: const InputDecoration(
-                  hintText: "Genre",
-                  border: OutlineInputBorder(),
-                ),
-                items: genders
-                    .map((g) =>
-                    DropdownMenuItem(value: g, child: Text(g)))
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => selectedGender = value),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // AGE
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30),
-              child: DropdownButtonFormField<String>(
-                value: selectedAgeRange,
-                decoration: const InputDecoration(
-                  hintText: "Tranche d'âge",
-                  border: OutlineInputBorder(),
-                ),
-                items: ageRanges
-                    .map((age) => DropdownMenuItem(
-                  value: age,
-                  child: Text(age),
-                ))
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => selectedAgeRange = value),
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            // PASSWORD
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: TextField(
@@ -315,7 +244,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
             const SizedBox(height: 10),
 
-            // CONFIRM PASSWORD
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: TextField(
@@ -355,7 +283,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                   const Expanded(
                     child: Text(
-                      "J'accepte l'utilisation des données pour améliorer l'expérience FoodMali.",
+                      "J'accepte que mes données soient utilisées pour améliorer l'expérience FoodMali.",
                       style: TextStyle(fontSize: 13),
                     ),
                   ),
