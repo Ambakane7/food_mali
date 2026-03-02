@@ -1,7 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:food_mali/Accueil/Page1.dart';
 import 'package:lottie/lottie.dart';
-
 import '../auth/auth_service.dart';
 import '../components/my_button.dart';
 import '../components/my_textfield.dart';
@@ -21,15 +20,29 @@ class _LoginPageState extends State<LoginPage> {
 
   final AuthService _authService = AuthService();
 
-  // ✅ AJOUT : contrôle visibilité mot de passe
   bool _obscurePassword = true;
 
-  // ===== CONVERT PHONE TO EMAIL (INTERNE) =====
-  String phoneToEmail(String phone) {
-    return "$phone@foodmali.app";
+  // ===== NORMALISATION NUMERO =====
+  String normalizePhone(String input) {
+    String phone = input.trim();
+
+    // Supprime espaces
+    phone = phone.replaceAll(" ", "");
+
+    // Si commence par 0
+    if (phone.startsWith("0")) {
+      phone = phone.substring(1);
+    }
+
+    // Si pas de +223
+    if (!phone.startsWith("+")) {
+      phone = "+223$phone";
+    }
+
+    return phone;
   }
 
-  // ===== LOGIN METHOD =====
+  // ===== LOGIN =====
   Future<void> login() async {
     final identifier = identifierController.text.trim();
     final password = passwordController.text.trim();
@@ -46,20 +59,21 @@ class _LoginPageState extends State<LoginPage> {
       if (identifier.contains('@')) {
         emailToUse = identifier;
       }
-      // ===== CAS TELEPHONE =====
+      // ===== CAS NUMERO =====
       else {
-        final phone = identifier.startsWith('+')
-            ? identifier
-            : '+223$identifier';
+        final normalizedPhone = normalizePhone(identifier);
 
-        final email = await _authService.getEmailFromPhone(phone);
+        final doc = await FirebaseFirestore.instance
+            .collection('phone_lookup')
+            .doc(normalizedPhone)
+            .get();
 
-        if (email == null) {
+        if (!doc.exists) {
           showError("Aucun compte associé à ce numéro.");
           return;
         }
 
-        emailToUse = email;
+        emailToUse = doc['email'];
       }
 
       await _authService.signInWithEmailPassword(
@@ -67,10 +81,14 @@ class _LoginPageState extends State<LoginPage> {
         password,
       );
 
-      Navigator.pushReplacement(
+      if (!mounted) return;
+
+      Navigator.pushNamedAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => Page1()),
+        "/",
+            (route) => false,
       );
+
     } catch (e) {
       showError("Identifiants incorrects.");
     }
@@ -99,7 +117,6 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // ===== UI =====
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -109,7 +126,6 @@ class _LoginPageState extends State<LoginPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Lottie.asset("lib/images/contact.json"),
-
             const SizedBox(height: 10),
 
             const Text(
@@ -123,7 +139,6 @@ class _LoginPageState extends State<LoginPage> {
 
             const SizedBox(height: 25),
 
-            // ===== IDENTIFIER =====
             MyTextfield(
               controller: identifierController,
               hintext: "Email ou numéro de téléphone",
@@ -132,7 +147,6 @@ class _LoginPageState extends State<LoginPage> {
 
             const SizedBox(height: 10),
 
-            // ===== PASSWORD AVEC VISIBILITÉ =====
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 25),
               child: TextField(
@@ -159,7 +173,6 @@ class _LoginPageState extends State<LoginPage> {
 
             const SizedBox(height: 15),
 
-            // ===== LOGIN BUTTON =====
             MyButton(
               text: "Se connecter",
               onTap: login,
@@ -167,7 +180,6 @@ class _LoginPageState extends State<LoginPage> {
 
             const SizedBox(height: 15),
 
-            // ===== REGISTER =====
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [

@@ -20,12 +20,13 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmpasswordController =
+  final TextEditingController confirmPasswordController =
   TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool acceptDataUsage = false;
+  bool _isLoading = false;
 
   Country selectedCountry = Country(
     phoneCode: '223',
@@ -45,7 +46,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final phone = phoneController.text.trim();
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
-    final confirmPassword = confirmpasswordController.text.trim();
+    final confirmPassword = confirmPasswordController.text.trim();
 
     if (firstNameController.text.trim().isEmpty ||
         lastNameController.text.trim().isEmpty ||
@@ -62,10 +63,12 @@ class _RegisterPageState extends State<RegisterPage> {
       return false;
     }
 
-    // Téléphone optionnel mais valide si rempli
-    if (phone.isNotEmpty && !RegExp(r'^[0-9]{8}$').hasMatch(phone)) {
-      showError("Le numéro doit contenir exactement 8 chiffres.");
-      return false;
+    // Téléphone OPTIONNEL mais valide si rempli
+    if (phone.isNotEmpty) {
+      if (!RegExp(r'^[0-9]{8}$').hasMatch(phone)) {
+        showError("Le numéro doit contenir exactement 8 chiffres.");
+        return false;
+      }
     }
 
     if (password != confirmPassword) {
@@ -99,13 +102,19 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   // ================= REGISTER =================
-  void register() async {
-    final authService = AuthService();
+  Future<void> register() async {
     if (!validateFields()) return;
 
+    setState(() => _isLoading = true);
+
+    final authService = AuthService();
     final phone = phoneController.text.trim();
-    final phoneFull =
-    phone.isNotEmpty ? "+${selectedCountry.phoneCode}$phone" : null;
+
+    String? phoneFull;
+
+    if (phone.isNotEmpty) {
+      phoneFull = "+${selectedCountry.phoneCode}$phone";
+    }
 
     try {
       final userCredential = await authService.signUpWithEmailPassword(
@@ -119,23 +128,41 @@ class _RegisterPageState extends State<RegisterPage> {
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'firstName': firstNameController.text.trim(),
           'lastName': lastNameController.text.trim(),
-          'phone': phoneFull,
           'email': emailController.text.trim(),
+          'role': 'user',
           'dataConsent': acceptDataUsage,
           'orderCount': 0,
           'totalSpent': 0,
           'segment': 'new_user',
           'createdAt': Timestamp.now(),
+          if (phoneFull != null) 'phone': phoneFull,
         });
+
+        // 🔥 ENREGISTREMENT DANS PHONE_LOOKUP
+        if (phoneFull != null) {
+          await FirebaseFirestore.instance
+              .collection('phone_lookup')
+              .doc(phoneFull)
+              .set({
+            'email': emailController.text.trim(),
+          });
+        }
       }
 
       if (!mounted) return;
 
       Navigator.pushNamedAndRemoveUntil(
-          context, "/", (route) => false);
+        context,
+        "/",
+            (route) => false,
+      );
 
     } catch (e) {
       showError("Erreur lors de l'inscription.");
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -156,6 +183,7 @@ class _RegisterPageState extends State<RegisterPage> {
               hintext: "Prénom",
               obscureText: false,
             ),
+
             const SizedBox(height: 10),
 
             MyTextfield(
@@ -163,9 +191,10 @@ class _RegisterPageState extends State<RegisterPage> {
               hintext: "Nom",
               obscureText: false,
             ),
+
             const SizedBox(height: 10),
 
-            // ===== TELEPHONE (optionnel) =====
+            // ===== TELEPHONE OPTIONNEL =====
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               decoration: BoxDecoration(
@@ -247,7 +276,7 @@ class _RegisterPageState extends State<RegisterPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               child: TextField(
-                controller: confirmpasswordController,
+                controller: confirmPasswordController,
                 obscureText: _obscureConfirmPassword,
                 decoration: InputDecoration(
                   hintText: "Confirmer le mot de passe",
@@ -293,7 +322,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
             const SizedBox(height: 20),
 
-            MyButton(text: "S'inscrire", onTap: register),
+            _isLoading
+                ? const CircularProgressIndicator()
+                : MyButton(text: "S'inscrire", onTap: register),
 
             const SizedBox(height: 20),
           ],
