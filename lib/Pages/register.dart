@@ -1,13 +1,14 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:food_mali/auth/auth_service.dart';
 import 'package:lottie/lottie.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../auth/auth_service.dart';
 import '../components/my_button.dart';
 import '../components/my_textfield.dart';
 
 class RegisterPage extends StatefulWidget {
   final Function()? onTap;
+
   const RegisterPage({super.key, this.onTap});
 
   @override
@@ -15,13 +16,12 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  final TextEditingController firstNameController = TextEditingController();
-  final TextEditingController lastNameController = TextEditingController();
-  final TextEditingController phoneController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController =
-  TextEditingController();
+  final firstNameController = TextEditingController();
+  final lastNameController = TextEditingController();
+  final phoneController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -41,88 +41,55 @@ class _RegisterPageState extends State<RegisterPage> {
     e164Key: '',
   );
 
-  // ================= VALIDATION =================
+  void showError(String message) {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Erreur"),
+        content: Text(message),
+      ),
+    );
+  }
+
   bool validateFields() {
-    final phone = phoneController.text.trim();
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-    final confirmPassword = confirmPasswordController.text.trim();
-
-    if (firstNameController.text.trim().isEmpty ||
-        lastNameController.text.trim().isEmpty ||
-        email.isEmpty ||
-        password.isEmpty ||
-        confirmPassword.isEmpty) {
-      showError("Veuillez remplir tous les champs obligatoires.");
+    if (firstNameController.text.isEmpty ||
+        lastNameController.text.isEmpty ||
+        emailController.text.isEmpty ||
+        passwordController.text.isEmpty ||
+        confirmPasswordController.text.isEmpty) {
+      showError("Champs obligatoires manquants");
       return false;
     }
 
-    // Email obligatoire
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      showError("Adresse email invalide.");
-      return false;
-    }
-
-    // Téléphone OPTIONNEL mais valide si rempli
-    if (phone.isNotEmpty) {
-      if (!RegExp(r'^[0-9]{8}$').hasMatch(phone)) {
-        showError("Le numéro doit contenir exactement 8 chiffres.");
-        return false;
-      }
-    }
-
-    if (password != confirmPassword) {
-      showError("Les mots de passe ne correspondent pas.");
+    if (passwordController.text != confirmPasswordController.text) {
+      showError("Les mots de passe ne correspondent pas");
       return false;
     }
 
     if (!acceptDataUsage) {
-      showError(
-          "Vous devez accepter l'utilisation des données pour continuer.");
+      showError("Veuillez accepter les conditions");
       return false;
     }
 
     return true;
   }
 
-  void showError(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Erreur"),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
-          )
-        ],
-      ),
-    );
-  }
-
-  // ================= REGISTER =================
   Future<void> register() async {
     if (!validateFields()) return;
 
     setState(() => _isLoading = true);
 
-    final authService = AuthService();
-    final phone = phoneController.text.trim();
-
-    String? phoneFull;
-
-    if (phone.isNotEmpty) {
-      phoneFull = "+${selectedCountry.phoneCode}$phone";
-    }
-
     try {
-      final userCredential = await authService.signUpWithEmailPassword(
+      final auth = AuthService();
+
+      final credential = await auth.signUpWithEmailPassword(
         emailController.text.trim(),
         passwordController.text.trim(),
       );
 
-      final uid = userCredential.user?.uid;
+      final uid = credential.user?.uid;
 
       if (uid != null) {
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
@@ -130,47 +97,26 @@ class _RegisterPageState extends State<RegisterPage> {
           'lastName': lastNameController.text.trim(),
           'email': emailController.text.trim(),
           'role': 'user',
-          'dataConsent': acceptDataUsage,
-          'orderCount': 0,
-          'totalSpent': 0,
-          'segment': 'new_user',
           'createdAt': Timestamp.now(),
-          if (phoneFull != null) 'phone': phoneFull,
         });
-
-        // 🔥 ENREGISTREMENT DANS PHONE_LOOKUP
-        if (phoneFull != null) {
-          await FirebaseFirestore.instance
-              .collection('phone_lookup')
-              .doc(phoneFull)
-              .set({
-            'email': emailController.text.trim(),
-          });
-        }
       }
 
       if (!mounted) return;
 
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        "/",
-            (route) => false,
-      );
-
+      Navigator.pushNamedAndRemoveUntil(context, "/", (route) => false);
     } catch (e) {
-      showError("Erreur lors de l'inscription.");
+      showError("Erreur lors de l'inscription");
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // ================= UI =================
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
-      backgroundColor: Colors.white.withOpacity(0.2),
+      backgroundColor: Colors.white, // ✅ correction ici
       body: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -194,7 +140,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
             const SizedBox(height: 10),
 
-            // ===== TELEPHONE OPTIONNEL =====
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 30),
               decoration: BoxDecoration(

@@ -21,20 +21,15 @@ class _LoginPageState extends State<LoginPage> {
   final AuthService _authService = AuthService();
 
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
-  // ===== NORMALISATION NUMERO =====
   String normalizePhone(String input) {
-    String phone = input.trim();
+    String phone = input.trim().replaceAll(" ", "");
 
-    // Supprime espaces
-    phone = phone.replaceAll(" ", "");
-
-    // Si commence par 0
     if (phone.startsWith("0")) {
       phone = phone.substring(1);
     }
 
-    // Si pas de +223
     if (!phone.startsWith("+")) {
       phone = "+223$phone";
     }
@@ -42,7 +37,6 @@ class _LoginPageState extends State<LoginPage> {
     return phone;
   }
 
-  // ===== LOGIN =====
   Future<void> login() async {
     final identifier = identifierController.text.trim();
     final password = passwordController.text.trim();
@@ -52,15 +46,14 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
+    setState(() => _isLoading = true);
+
     try {
       String emailToUse;
 
-      // ===== CAS EMAIL =====
       if (identifier.contains('@')) {
         emailToUse = identifier;
-      }
-      // ===== CAS NUMERO =====
-      else {
+      } else {
         final normalizedPhone = normalizePhone(identifier);
 
         final doc = await FirebaseFirestore.instance
@@ -88,13 +81,16 @@ class _LoginPageState extends State<LoginPage> {
         "/",
             (route) => false,
       );
-
     } catch (e) {
       showError("Identifiants incorrects.");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void showError(String message) {
+    if (!mounted) return;
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -119,8 +115,10 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
-      backgroundColor: Colors.white.withOpacity(0.2),
+      backgroundColor: Colors.white, // ✅ correction ici
       body: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
