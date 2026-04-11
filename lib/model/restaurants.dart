@@ -90,6 +90,18 @@ class Restaurants extends ChangeNotifier {
         "KFC JUNIOR"
     ),
     Food(
+        "Tacos Viande",
+        "",
+        "lib/images/kfc_junior/Tacos_poulet.jpeg",
+        3000,
+        FoodCategory.KFC,
+        [
+          Addon(name: "", price: 0),
+          Addon(name: "", price: 0),
+        ],
+        "KFC JUNIOR"
+    ),
+    Food(
         "Tacos Poulet",
         "",
         "lib/images/kfc_junior/Tacos_poulet.jpeg",
