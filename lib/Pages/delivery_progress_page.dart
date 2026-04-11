@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:food_mali/Accueil/Page1.dart';
 import 'package:food_mali/auth/database/firestore.dart';
-import 'package:food_mali/components/my_button.dart';
 import 'package:food_mali/components/my_recipe.dart';
 import 'package:food_mali/model/restaurants.dart';
 import 'package:provider/provider.dart';
@@ -28,28 +27,62 @@ class _DeliveryProgressPageState extends State<DeliveryProgressPage> {
     final restaurants = context.read<Restaurants>();
     final userData = await db.getUserData();
 
-    if (userData != null) {
-      restaurants.setClientInfo(
-        firstName: userData['Prenom']
-            ?? userData['prenom']
-            ?? userData['firstName']
-            ?? "",
-        lastName: userData['Nom']
-            ?? userData['nom']
-            ?? userData['lastName']
-            ?? "",
-        phone: userData['Telephone']
-            ?? userData['telephone']
-            ?? userData['phone']
-            ?? "",
-        email: userData['email'] ?? "",
-      );
-
+    // 🔴 Vérification utilisateur
+    if (userData == null) {
+      throw Exception("Utilisateur introuvable");
     }
 
-   final receipt = restaurants.displayCartReceipt();
-    await db.saveOrderToDatabase(receipt);
+    // ✅ Récupération téléphone (standard)
+    final phone = userData['phone'] ?? "";
 
+    // 🔥 BLOQUER SI TELEPHONE VIDE
+    if (phone.isEmpty) {
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          title: const Text("Numéro requis"),
+          content: const Text(
+            "Veuillez renseigner votre numéro de téléphone dans votre profil avant de valider la commande.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+
+                // 👉 ouvre le drawer (profil)
+                Scaffold.of(context).openDrawer();
+              },
+              child: const Text("Aller au profil"),
+            ),
+          ],
+        ),
+      );
+
+      return; // 🚨 STOP → pas de commande
+    }
+
+    // ✅ Injecter données client
+    restaurants.setClientInfo(
+      firstName: userData['firstName']
+          ?? userData['Prenom']
+          ?? userData['prenom']
+          ?? "",
+      lastName: userData['lastName']
+          ?? userData['Nom']
+          ?? userData['nom']
+          ?? "",
+      phone: phone,
+      email: userData['email'] ?? "",
+    );
+
+    // ✅ Générer reçu
+    final receipt = restaurants.displayCartReceipt();
+
+    // 🔥 Sauvegarde commande (important)
+    await db.saveOrderToDatabase(receipt);
 
     setState(() {
       isLoading = false;
@@ -59,6 +92,7 @@ class _DeliveryProgressPageState extends State<DeliveryProgressPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: const Drawer(), // ⚠️ IMPORTANT pour openDrawer()
       bottomNavigationBar: _buildBottomNavBar(context),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -71,14 +105,17 @@ class _DeliveryProgressPageState extends State<DeliveryProgressPage> {
             children: [
               const MyRecipe(),
               const SizedBox(height: 10),
+
+              // ✅ bouton terminer
               GestureDetector(
                 onTap: () {
                   final restaurants = context.read<Restaurants>();
-                  restaurants.clearCart(); // <-- Vider le panier ici
+                  restaurants.clearCart();
 
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const Page1()),
+                    MaterialPageRoute(
+                        builder: (context) => const Page1()),
                   );
                 },
                 child: Container(
@@ -100,7 +137,6 @@ class _DeliveryProgressPageState extends State<DeliveryProgressPage> {
                   ),
                 ),
               ),
-
             ],
           ),
         ),
@@ -126,13 +162,16 @@ class _DeliveryProgressPageState extends State<DeliveryProgressPage> {
               color: Theme.of(context).colorScheme.background,
               shape: BoxShape.circle,
             ),
-            child: IconButton(onPressed: () {}, icon: const Icon(Icons.person)),
+            child: IconButton(
+              onPressed: () {},
+              icon: const Icon(Icons.person),
+            ),
           ),
           const SizedBox(width: 10),
           Column(
             children: [
               Text(
-                "Assistant(e) technique",
+                "Assistant(e) foodmali",
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
@@ -141,7 +180,8 @@ class _DeliveryProgressPageState extends State<DeliveryProgressPage> {
               ),
               Text(
                 "FoodMali",
-                style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                style:
+                TextStyle(color: Theme.of(context).colorScheme.primary),
               ),
             ],
           ),
@@ -159,7 +199,7 @@ class _DeliveryProgressPageState extends State<DeliveryProgressPage> {
                 ),
               ),
               const SizedBox(width: 5),
-              buildButton()
+              buildButton(),
             ],
           ),
         ],
@@ -169,6 +209,7 @@ class _DeliveryProgressPageState extends State<DeliveryProgressPage> {
 
   Widget buildButton() {
     final number = '+22378052121';
+
     return ElevatedButton(
       onPressed: () async {
         final uri = Uri.parse('tel:$number');

@@ -79,6 +79,12 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> register() async {
     if (!validateFields()) return;
 
+    // 🔴 Vérification téléphone (IMPORTANT)
+    if (phoneController.text.trim().isEmpty) {
+      showError("Veuillez entrer votre numéro de téléphone");
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -91,11 +97,16 @@ class _RegisterPageState extends State<RegisterPage> {
 
       final uid = credential.user?.uid;
 
+      // ✅ FORMAT TELEPHONE PROPRE
+      final fullPhone =
+          "+${selectedCountry.phoneCode}${phoneController.text.trim()}";
+
       if (uid != null) {
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'firstName': firstNameController.text.trim(),
           'lastName': lastNameController.text.trim(),
           'email': emailController.text.trim(),
+          'phone': fullPhone, // ✅ CORRECTION ICI
           'role': 'user',
           'createdAt': Timestamp.now(),
         });
